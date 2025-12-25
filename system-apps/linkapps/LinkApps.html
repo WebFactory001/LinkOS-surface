@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <h1>LinkStore</h1>
+            <button class="publish-btn" onclick="openPublishModal()">Publish App</button>
+        </div>
+
+        <div class="container">
+            <div class="app-grid" id="appGrid"></div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <h2>No apps yet</h2>
+                <p>Click Publish App to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="publishModal">
+        <div class="modal-content">
+            <div class="modal-header">Publish New App</div>
+            <form id="publishForm" onsubmit="publishApp(event)">
+                <div class="form-group">
+                    <label for="appName">App Name</label>
+                    <input type="text" id="appName" required>
+                </div>
+                <div class="form-group">
+                    <label for="appIcon">App Icon (512x512 PNG only)</label>
+                    <input type="file" id="appIcon" accept=".png" required>
+                </div>
+                <div class="form-group">
+                    <label for="appPassword">Password</label>
+                    <input type="password" id="appPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="appCode">HTML Code</label>
+                    <textarea id="appCode" required placeholder="Paste your HTML code here..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closePublishModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Publish App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">Delete App</div>
+            <div class="form-group">
+                <label for="deletePassword">Enter password to delete this app</label>
+                <input type="password" id="deletePassword">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="iframe-container" id="iframeContainer">
+        <iframe id="appIframe"></iframe>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7HDgtpqE12FZI1vGEVpscYWbY0lwg7p0",
+            authDomain: "linkstore-apps.firebaseapp.com",
+            projectId: "linkstore-apps",
+            storageBucket: "linkstore-apps.firebasestorage.app",
+            messagingSenderId: "791773418088",
+            appId: "1:791773418088:web:4b352f50c0143cf299a1dd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentDeleteId = null;
+        let currentDeleteDocId = null;
+
+        window.openPublishModal = function() {
+            document.getElementById('publishModal').classList.add('active');
+        }
+
+        window.closePublishModal = function() {
+            document.getElementById('publishModal').classList.remove('active');
+            document.getElementById('publishForm').reset();
+        }
+
+        window.openDeleteModal = function(id, docId) {
+            currentDeleteId = id;
+            currentDeleteDocId = docId;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        window.closeDeleteModal = function() {
+            document.getElementById('deleteModal').classList.remove('active');
+            document.getElementById('deletePassword').value = '';
+            currentDeleteId = null;
+            currentDeleteDocId = null;
+        }
+
+        window.publishApp = async function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('appName').value;
+            const password = document.getElementById('appPassword').value;
+            const code = document.getElementById('appCode').value;
+            const iconFile = document.getElementById('appIcon').files[0];
+
+            if (!iconFile || iconFile.type !== 'image/png') {
+                alert('Please select a PNG file');
+                return;
+            }
+
+            const img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                img.src = e.target.result;
+                img.onload = async () => {
+                    if (img.width !== 512 || img.height !== 512) {
+                        alert('Icon must be exactly 512x512 pixels');
+                        return;
+                    }
+
+                    try {
+                        const newApp = {
+                            name: name,
+                            password: password,
+                            code: code,
+                            icon: e.target.result,
+                            createdAt: new Date().toISOString()
+                        };
+
+                        await addDoc(collection(db, 'apps'), newApp);
+                        closePublishModal();
+                        loadApps();
+                    } catch (error) {
+                        console.error('Error publishing app:', error);
+                        alert('Failed to publish app. Please try again.');
+                    }
+                };
+            };
+
+            reader.readAsDataURL(iconFile);
+        }
+
+        async function loadApps() {
+            const grid = document.getElementById('appGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            try {
+                grid.innerHTML = '';
+
+                const q = query(collection(db, 'apps'), orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    emptyState.style.display = 'block';
+                } else {
+                    emptyState.style.display = 'none';
+                    querySnapshot.forEach((docSnap) => {
+                        const app = docSnap.data();
+                        const card = document.createElement('div');
+                        card.className = 'app-card';
+                        card.innerHTML = `
+                            <button class="delete-btn" onclick="event.stopPropagation(); openDeleteModal('${app.name}', '${docSnap.id}')">×</button>
+                            <div class="app-icon">
+                                <img src="${app.icon}" alt="${app.name}">
+                            </div>
+                            <div class="app-name">${app.name}</div>
+                        `;
+                        card.onclick = () => openApp(app.code);
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading apps:', error);
+                alert('Failed to load apps. Please refresh the page.');
+            }
+        }
+
+        window.openApp = function(code) {
+            const mainContent = document.getElementById('mainContent');
+            const container = document.getElementById('iframeContainer');
+            const iframe = document.getElementById('appIframe');
+            
+            mainContent.classList.add('hidden');
+            container.classList.add('active');
+            
+            iframe.srcdoc = code;
+        }
+
+        window.confirmDelete = async function() {
+            const password = document.getElementById('deletePassword').value;
+
+            if (!password) {
+                alert('Please enter password');
+                return;
+            }
+
+            try {
+                const q = query(collection(db, 'apps'));
+                const querySnapshot = await getDocs(q);
+                
+                let appToDelete = null;
+                querySnapshot.forEach((docSnap) => {
+                    if (docSnap.id === currentDeleteDocId) {
+                        appToDelete = { id: docSnap.id, data: docSnap.data() };
+                    }
+                });
+
+                if (!appToDelete) {
+                    alert('App not found');
+                    return;
+                }
+
+                if (appToDelete.data.password !== password) {
+                    alert('Incorrect password');
+                    return;
+                }
+
+                await deleteDoc(doc(db, 'apps', currentDeleteDocId));
+                closeDeleteModal();
+                loadApps();
+            } catch (error) {
+                console.error('Error deleting app:', error);
+                alert('Failed to delete app. Please try again.');
+            }
+        }
+
+        loadApps();
+    </script>
+</body>
+</html>

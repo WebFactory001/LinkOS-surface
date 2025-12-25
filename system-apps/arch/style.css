@@ -1,0 +1,523 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        :root {
+            --primary: #e0e5ec;
+            --shadow-light: rgba(255, 255, 255, 0.7);
+            --shadow-dark: rgba(163, 177, 198, 0.6);
+            --text: #333;
+            --error: #ff4757;
+            --success: #2ed573;
+        }
+
+        body {
+            background-color: var(--primary);
+            color: var(--text);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Home View (shown by default) */
+        #homeView {
+            min-height: 100vh;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .home-view-hidden {
+            transform: translateX(-100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            border-radius: 25px;
+            background: var(--primary);
+            box-shadow: 9px 9px 16px var(--shadow-dark), -9px -9px 16px var(--shadow-light);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+            color: transparent;
+            background: linear-gradient(135deg, #333 0%, #666 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Search Bar */
+        .search-container {
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 20px 25px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            background: var(--primary);
+            box-shadow: inset 8px 8px 16px var(--shadow-dark), inset -8px -8px 16px var(--shadow-light);
+            color: var(--text);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            box-shadow: inset 10px 10px 20px var(--shadow-dark), inset -10px -10px 20px var(--shadow-light);
+        }
+
+        .search-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .search-button:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .search-button i {
+            font-size: 1.2rem;
+            color: var(--text);
+        }
+
+        /* Message Display */
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: 500;
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            display: none;
+        }
+
+        .message.error {
+            color: var(--error);
+            display: block;
+        }
+
+        .message.success {
+            color: var(--success);
+            display: block;
+        }
+
+        /* Apps Grid */
+        .apps-section {
+            margin-bottom: 40px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 0 10px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .publish-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 15px;
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .publish-btn:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 25px;
+            padding: 25px;
+            border-radius: 25px;
+            background: var(--primary);
+            box-shadow: inset 8px 8px 16px var(--shadow-dark), inset -8px -8px 16px var(--shadow-light);
+            min-height: 300px;
+        }
+
+        .app-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 15px;
+            border-radius: 20px;
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text);
+            position: relative; /* Added for delete button positioning */
+        }
+
+        .app-card:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+            transform: translateY(2px);
+        }
+
+        /* New Delete Button Style */
+        .app-delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+            color: var(--error);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .app-card:hover .app-delete-btn {
+            opacity: 1;
+        }
+
+        .app-delete-btn:hover {
+            box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+            color: red;
+        }
+
+        .app-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            object-fit: cover;
+            background: var(--primary);
+            box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+            padding: 10px;
+        }
+
+        .app-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: center;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        /* Fullscreen Browser View */
+        #browserView {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .browser-view-active {
+            display: flex !important;
+        }
+
+        /* Top Bar in Fullscreen */
+        .top-bar {
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            background: var(--primary);
+            box-shadow: 0 4px 10px var(--shadow-dark);
+            z-index: 1001;
+        }
+
+        .back-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-button:hover {
+            box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+        }
+
+        .url-display {
+            flex: 1;
+            margin: 0 20px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: var(--primary);
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+            font-size: 0.95rem;
+            color: var(--text);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        /* Fullscreen Iframe */
+        .fullscreen-iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: white;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(224, 229, 236, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            width: 90%;
+            max-width: 500px;
+            padding: 40px;
+            border-radius: 30px;
+            background: var(--primary);
+            box-shadow: 20px 20px 40px var(--shadow-dark), -20px -20px 40px var(--shadow-light);
+            position: relative;
+        }
+
+        .modal h2 {
+            margin-bottom: 25px;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 15px;
+            background: var(--primary);
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .file-input-container {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            border-radius: 15px;
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn.cancel {
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            color: var(--text);
+        }
+
+        .modal-btn.cancel:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .modal-btn.publish {
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            color: var(--text);
+        }
+
+        .modal-btn.publish:hover {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .modal-btn.delete {
+            background: var(--primary);
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            color: var(--error);
+        }
+        
+        .modal-btn.delete:hover {
+             box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+        }
+
+        /* Empty State */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .apps-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .modal {
+                padding: 30px 20px;
+            }
+            
+            .top-bar {
+                padding: 0 15px;
+            }
+            
+            .url-display {
+                font-size: 0.85rem;
+                margin: 0 15px;
+                padding: 10px 15px;
+            }
+
+            /* On mobile, always show delete button instead of hover */
+            .app-delete-btn {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            #homeView {
+                padding: 15px;
+            }
+            
+            .apps-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 15px;
+            }
+            
+            .app-icon {
+                width: 56px;
+                height: 56px;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+            
+            .back-button {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .url-display {
+                font-size: 0.8rem;
+            }
+        }

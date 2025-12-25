@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkDev - HTML Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-editor: #1e1e1e;
+            --bg-header: #2d2d2d;
+            --accent: #007acc;
+            --border: #3c3c3c;
+            --text: #cccccc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-editor);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Bootscreen Styles --- */
+        #bootscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #121212; /* Slightly darker than editor for depth */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+        }
+
+        .boot-content {
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .boot-logo {
+            font-size: 4rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 15px rgba(0, 122, 204, 0.3));
+        }
+
+        .boot-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: white;
+            margin-bottom: 25px;
+        }
+
+        .loader-bar {
+            width: 200px;
+            height: 2px;
+            background: #333;
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loader-progress {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: load 1.5s ease-in-out forwards;
+        }
+
+        @keyframes load {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 50px;
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            z-index: 100;
+        }
+
+        .brand { font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+        .filename { font-family: monospace; font-size: 0.9rem; opacity: 0.7; }
+        
+        .controls { display: flex; gap: 8px; }
+        button {
+            background: #3c3c3c;
+            color: white;
+            border: 1px solid #444;
+            padding: 5px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button:hover { background: #4c4c4c; }
+        button.primary { background: var(--accent); border-color: var(--accent); }
+        button.primary:hover { background: #1a8ad4; }
+
+        /* --- Main Workspace --- */
+        main {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+
+        .panel { height: 100%; overflow: hidden; }
+
+        #editor-container {
+            width: 50%; /* Initial split */
+            background: var(--bg-editor);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #code-editor {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-editor);
+            color: #d4d4d4;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 15px;
+            line-height: 1.5;
+            border: none;
+            outline: none;
+            resize: none;
+            tab-size: 4;
+            white-space: pre;
+        }
+
+        #resizer {
+            width: 6px;
+            background: var(--border);
+            cursor: col-resize;
+            transition: background 0.2s;
+        }
+        #resizer:hover { background: var(--accent); }
+
+        #preview-container {
+            flex: 1;
+            background: white;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            transition: transform 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+    <div id="bootscreen">
+        <div class="boot-content">
+            <div class="boot-logo"><i class="fas fa-code"></i></div>
+            <div class="boot-title">LinkDev</div>
+            <div class="loader-bar">
+                <div class="loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="brand"><i class="fas fa-code"></i> LinkDev</div>
+        <div class="filename" id="file-display">index.html</div>
+        <div class="controls">
+            <button onclick="createNew()"><i class="fas fa-file-alt"></i> New</button>
+            <button onclick="document.getElementById('file-input').click()"><i class="fas fa-folder-open"></i> Open</button>
+            <button class="primary" onclick="downloadFile()"><i class="fas fa-download"></i> Download</button>
+        </div>
+    </header>
+
+    <main id="workspace">
+        <div id="editor-container" class="panel">
+            <textarea id="code-editor" spellcheck="false" placeholder="Start typing your HTML..."></textarea>
+        </div>
+
+        <div id="resizer"></div>
+
+        <div id="preview-container" class="panel">
+            <iframe id="preview-frame"></iframe>
+        </div>
+    </main>
+
+    <input type="file" id="file-input" hidden accept=".html,.htm" onchange="openExisting(event)">
+    <div id="toast">File Saved!</div>
+
+    <script>
+        const editor = document.getElementById('code-editor');
+        const preview = document.getElementById('preview-frame');
+        const resizer = document.getElementById('resizer');
+        const editorPanel = document.getElementById('editor-container');
+        const fileDisplay = document.getElementById('file-display');
+        const bootscreen = document.getElementById('bootscreen');
+        
+        let currentFileName = "index.html";
+        let debounceTimer;
+
+        const defaultHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 90vh; background: #f4f4f9; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #007acc; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Welcome to LinkDev</h1>
+        <p>This is a stable, clean live preview.</p>
+        <p>Edit the code on the left to see changes instantly.</p>
+<br><Br>
+<p><b><u>NOTE</u>: It is recommended to restart LinkDev every time before opening a file once a file from your computer has already been opened.</b></p>
+    </div>
+</body>
+</html>`;
+
+        function updatePreview() {
+            const doc = preview.contentDocument || preview.contentWindow.document;
+            doc.open();
+            doc.write(editor.value);
+            doc.close();
+        }
+
+        editor.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePreview, 200);
+        });
+
+        function createNew() {
+            const name = prompt("Enter filename:", "new-page");
+            if (name) {
+                currentFileName = name.endsWith('.html') ? name : name + ".html";
+                fileDisplay.innerText = currentFileName;
+                editor.value = defaultHTML;
+                updatePreview();
+                showToast("Created " + currentFileName);
+            }
+        }
+
+        function openExisting(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                editor.value = event.target.result;
+                currentFileName = file.name;
+                fileDisplay.innerText = currentFileName;
+                updatePreview();
+                showToast("Opened " + currentFileName);
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadFile() {
+            const blob = new Blob([editor.value], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Downloaded " + currentFileName);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                downloadFile();
+            }
+        });
+
+        let m_pos;
+        function resize(e) {
+            const dx = m_pos - e.x;
+            m_pos = e.x;
+            const newWidth = parseInt(getComputedStyle(editorPanel, '').width) - dx;
+            editorPanel.style.width = newWidth + "px";
+        }
+
+        resizer.addEventListener("mousedown", function(e) {
+            m_pos = e.x;
+            document.addEventListener("mousemove", resize, false);
+            preview.style.pointerEvents = 'none';
+        }, false);
+
+        document.addEventListener("mouseup", function() {
+            document.removeEventListener("mousemove", resize, false);
+            preview.style.pointerEvents = 'auto';
+        }, false);
+
+        // --- Initialization & Bootscreen Logic ---
+        window.onload = () => {
+            editor.value = defaultHTML;
+            updatePreview();
+
+            // Hide bootscreen after 1.5 seconds
+            setTimeout(() => {
+                bootscreen.classList.add('hide-boot');
+                // Remove from DOM entirely after transition for performance
+                setTimeout(() => bootscreen.remove(), 600);
+            }, 1500);
+        };
+    </script>
+</body>
+</html>

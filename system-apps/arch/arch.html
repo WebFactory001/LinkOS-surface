@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arch</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="homeView">
+        <div class="container">
+            <header>
+                <h1>Arch</h1>
+            </header>
+
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="eg: 'webfactory001.github.io/appname' or 'yourapp-webfactory.com">
+                <button class="search-button" id="searchButton">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <div class="message" id="message"></div>
+
+            <div class="apps-section">
+                <div class="section-header">
+                    <div class="section-title"> Web Apps</div>
+                    <button class="publish-btn" id="publishBtn">
+                        <i class="fas fa-plus"></i> Publish App
+                    </button>
+                </div>
+                <div class="apps-grid" id="appsGrid">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="browserView">
+        <div class="top-bar">
+            <button class="back-button" id="backButton">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <div class="url-display" id="urlDisplay">
+                </div>
+        </div>
+        <iframe class="fullscreen-iframe" id="websiteFrame" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"></iframe>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>Publish Web App</h2>
+            <div class="form-group">
+                <label for="appName">App Name</label>
+                <input type="text" id="appName" class="form-input" placeholder="Enter app name">
+            </div>
+            <div class="form-group">
+                <label for="appUrl">App URL</label>
+                <input type="text" id="appUrl" class="form-input" placeholder="https://example-arch-site.com">
+            </div>
+            <div class="form-group">
+                <label for="appPassword">Security Password (Required for deletion)</label>
+                <input type="password" id="appPassword" class="form-input" placeholder="Set a password">
+            </div>
+            <div class="form-group">
+                <label>App Icon (512×512 PNG)</label>
+                <div class="file-input-container">
+                    <label for="appIcon" class="file-input-label">
+                        <i class="fas fa-cloud-upload-alt"></i> Choose Icon File
+                    </label>
+                    <input type="file" id="appIcon" class="file-input" accept=".png">
+                </div>
+                <div class="file-info" id="fileInfo">No file selected</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="cancelBtn">Cancel</button>
+                <button class="modal-btn publish" id="publishModalBtn">Publish</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteModalOverlay">
+        <div class="modal">
+            <h2>Delete App?</h2>
+            <p style="text-align: center; margin-bottom: 20px; color: #666;">Enter the security password you set when creating this app.</p>
+            <div class="form-group">
+                <label for="deletePassword">Password</label>
+                <input type="password" id="deletePassword" class="form-input" placeholder="Enter password to confirm">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="cancelDeleteBtn">Cancel</button>
+                <button class="modal-btn delete" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+       // ====================
+    // FIREBASE CONFIGURATION
+    // ====================
+    // REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
+   const firebaseConfig = {
+  apiKey: "AIzaSyCeOxanVP2GiEaGIy_2s7RHvU98KNF9FGo",
+  authDomain: "arch-app-sync.firebaseapp.com",
+  projectId: "arch-app-sync",
+  storageBucket: "arch-app-sync.firebasestorage.app",
+  messagingSenderId: "1076224827708",
+  appId: "1:1076224827708:web:8f491f900b778e30d77e39",
+  measurementId: "G-XPDNN1X5WB"
+};
+
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ====================
+    // DOM Elements
+    // ====================
+    const homeView = document.getElementById('homeView');
+    const browserView = document.getElementById('browserView');
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    const message = document.getElementById('message');
+    const appsGrid = document.getElementById('appsGrid');
+    const publishBtn = document.getElementById('publishBtn');
+    const websiteFrame = document.getElementById('websiteFrame');
+    const backButton = document.getElementById('backButton');
+    const urlDisplay = document.getElementById('urlDisplay');
+    
+    // Publish Modal Elements
+    const modalOverlay = document.getElementById('modalOverlay');
+    const appName = document.getElementById('appName');
+    const appUrl = document.getElementById('appUrl');
+    const appPassword = document.getElementById('appPassword');
+    const appIcon = document.getElementById('appIcon');
+    const fileInfo = document.getElementById('fileInfo');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const publishModalBtn = document.getElementById('publishModalBtn');
+
+    // Delete Modal Elements
+    const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    const deletePassword = document.getElementById('deletePassword');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    // ====================
+    // State
+    // ====================
+    let apps = [];
+    let currentUrl = '';
+    let appToDeleteId = null;
+
+    // ====================
+    // Initialize
+    // ====================
+    function init() {
+        setupEventListeners();
+        loadAppsFromFirestore();
+    }
+
+    // ====================
+    // Event Listeners
+    // ====================
+    function setupEventListeners() {
+        // Search functionality
+        searchButton.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+
+        // Publish app
+        publishBtn.addEventListener('click', () => {
+            showModal();
+        });
+
+        // Back button
+        backButton.addEventListener('click', goBack);
+
+        // File input
+        appIcon.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.type !== 'image/png') {
+                    showMessage('Error: Only PNG files are allowed', 'error');
+                    appIcon.value = '';
+                    fileInfo.textContent = 'No file selected';
+                    return;
+                }
+                
+                fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                
+                const img = new Image();
+                img.onload = function() {
+                    if (this.width !== 512 || this.height !== 512) {
+                        showMessage('Error: Icon must be exactly 512×512 pixels', 'error');
+                        appIcon.value = '';
+                        fileInfo.textContent = 'No file selected';
+                    }
+                };
+                img.src = URL.createObjectURL(file);
+            }
+        });
+
+        // Publish Modal buttons
+        cancelBtn.addEventListener('click', hideModal);
+        publishModalBtn.addEventListener('click', publishAppToFirestore);
+
+        // Delete Modal buttons
+        cancelDeleteBtn.addEventListener('click', hideDeleteModal);
+        confirmDeleteBtn.addEventListener('click', confirmDeleteAppFromFirestore);
+
+        // Close modals on overlay click
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) hideModal();
+        });
+        deleteModalOverlay.addEventListener('click', (e) => {
+            if (e.target === deleteModalOverlay) hideDeleteModal();
+        });
+    }
+
+    // ====================
+    // Firebase Functions
+    // ====================
+
+    // Load apps from Firestore
+    async function loadAppsFromFirestore() {
+        try {
+            showMessage('Loading apps from cloud...', 'info');
+            
+            const snapshot = await db.collection('apps').get();
+            
+            if (snapshot.empty) {
+                // No apps in Firestore, add default app
+                await addDefaultApp();
+                await loadAppsFromFirestore(); // Reload after adding default
+                return;
+            }
+            
+            apps = [];
+            snapshot.forEach(doc => {
+                const appData = doc.data();
+                apps.push({
+                    id: doc.id,
+                    ...appData
+                });
+            });
+            
+            // Sort apps by date (newest first)
+            apps.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            displayApps();
+            showMessage('Apps loaded successfully!', 'success');
+            setTimeout(() => message.style.display = 'none', 2000);
+            
+        } catch (error) {
+            console.error('Error loading apps:', error);
+            showMessage('Failed to load apps from cloud', 'error');
+            // Fallback to localStorage if Firestore fails
+            loadFromLocalStorageFallback();
+        }
+    }
+
+    // Add default app to Firestore
+    async function addDefaultApp() {
+        const defaultApp = {
+            name: 'Progress',
+            url: 'https://rbproductions001.github.io/progress-app/',
+            password: 'admin',
+            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiNFMEU1RUMiLz4KPHBhdGggZD0iTTI1NiAxMjhDMTkyIDI1NiA5NiAzMjAgOTYgMzIwQzE2MCAzMjAgMjU2IDM4NCAyNTYgMzg0QzM1MiAzODQgNDQ4IDMyMCA1MTYgMzIwQzUxNiAzMjAgMzIwIDI1NiAyNTYgMTI4WiIgZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjIiLz4KPHBhdGggZD0iTTI1NiAxMjhDMTkyIDI1NiA5NiAzMjAgOTYgMzIwQzE2MCAzMjAgMjU2IDM4NCAyNTYgMzg0QzM1MiAzODQgNDQ4IDMyMCA1MTYgMzIwQzUxNiAzMjAgMzIwIDI1NiAyNTYgMTI4WiIgZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjEiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMjU2IiByPSI2NCIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K',
+            date: new Date().toISOString()
+        };
+        
+        try {
+            await db.collection('apps').add(defaultApp);
+        } catch (error) {
+            console.error('Error adding default app:', error);
+        }
+    }
+
+    // Publish app to Firestore
+    async function publishAppToFirestore() {
+        const name = appName.value.trim();
+        const url = appUrl.value.trim();
+        const pwd = appPassword.value.trim();
+        const iconFile = appIcon.files[0];
+
+        if (!name) { showMessage('Please enter app name', 'error'); return; }
+        if (!url) { showMessage('Please enter app URL', 'error'); return; }
+        if (!pwd) { showMessage('Please set a security password', 'error'); return; }
+
+        try { new URL(url); } catch { showMessage('Please enter a valid URL', 'error'); return; }
+
+        if (!iconFile) { showMessage('Please select an icon file', 'error'); return; }
+        if (iconFile.type !== 'image/png') { showMessage('Icon must be a PNG file', 'error'); return; }
+
+        try {
+            showMessage('Publishing app to cloud...', 'info');
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const iconData = e.target.result;
+                
+                const newApp = {
+                    name: name,
+                    url: url,
+                    password: pwd,
+                    icon: iconData,
+                    date: new Date().toISOString()
+                };
+
+                // Add to Firestore
+                const docRef = await db.collection('apps').add(newApp);
+                
+                // Add the Firestore document ID to the app object
+                newApp.id = docRef.id;
+                
+                // Update local apps array
+                apps.unshift(newApp); // Add to beginning (newest first)
+                
+                // Save to localStorage as backup
+                saveToLocalStorageBackup();
+                
+                displayApps();
+                hideModal();
+                showMessage(`"${name}" published successfully to cloud!`, 'success');
+            };
+            
+            reader.readAsDataURL(iconFile);
+            
+        } catch (error) {
+            console.error('Error publishing app:', error);
+            showMessage('Failed to publish app to cloud', 'error');
+        }
+    }
+
+    // Delete app from Firestore
+    async function confirmDeleteAppFromFirestore() {
+        if (!appToDeleteId) return;
+
+        const enteredPwd = deletePassword.value.trim();
+        const app = apps.find(a => a.id === appToDeleteId);
+
+        if (!app) {
+            hideDeleteModal();
+            return;
+        }
+
+        if (enteredPwd === app.password) {
+            try {
+                showMessage('Deleting app from cloud...', 'info');
+                
+                // Delete from Firestore
+                await db.collection('apps').doc(appToDeleteId).delete();
+                
+                // Update local apps array
+                apps = apps.filter(a => a.id !== appToDeleteId);
+                
+                // Update localStorage backup
+                saveToLocalStorageBackup();
+                
+                displayApps();
+                hideDeleteModal();
+                showMessage(`"${app.name}" deleted successfully from cloud`, 'success');
+                
+            } catch (error) {
+                console.error('Error deleting app:', error);
+                showMessage('Failed to delete app from cloud', 'error');
+            }
+        } else {
+            showMessage('Incorrect password. Cannot delete app.', 'error');
+        }
+    }
+
+    // ====================
+    // LocalStorage Backup (Fallback)
+    // ====================
+    
+    function saveToLocalStorageBackup() {
+        localStorage.setItem('arch-apps-backup', JSON.stringify(apps));
+    }
+    
+    function loadFromLocalStorageFallback() {
+        const savedApps = localStorage.getItem('arch-apps-backup');
+        if (savedApps) {
+            apps = JSON.parse(savedApps);
+            displayApps();
+            showMessage('Loaded from local backup', 'info');
+        } else {
+            // Create default app locally
+            apps = [{
+                id: 'default-' + Date.now(),
+                name: 'Progress',
+                url: 'https://rbproductions001.github.io/progress-app/',
+                password: 'admin',
+                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiNFMEU1RUMiLz4KPHBhdGggZD0iTTI1NiAxMjhDMTkyIDI1NiA5NiAzMjAgOTYgMzIwQzE2MCAzMjAgMjU2IDM4NCAyNTYgMzg0QzM1MiAzODQgNDQ4IDMyMCA1MTYgMzIwQzUxNiAzMjAgMzIwIDI1NiAyNTYgMTI4WiIgZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjIiLz4KPHBhdGggZD0iTTI1NiAxMjhDMTkyIDI1NiA5NiAzMjAgOTYgMzIwQzE2MCAzMjAgMjU2IDM4NCAyNTYgMzg0QzM1MiAzODQgNDQ4IDMyMCA1MTYgMzIwQzUxNiAzMjAgMzIwIDI1NiAyNTYgMTI4WiIgZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjEiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMjU2IiByPSI2NCIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K',
+                date: new Date().toISOString()
+            }];
+            displayApps();
+            showMessage('No apps found. Created default app.', 'info');
+        }
+    }
+
+    // ====================
+    // Existing UI Functions (unchanged)
+    // ====================
+    
+    function handleSearch() {
+        const url = searchInput.value.trim();
+        
+        if (!url) {
+            showMessage('Please enter a URL', 'error');
+            return;
+        }
+
+        if (url.toLowerCase().includes('publish')) {
+            showMessage('Publish app URLs are handled separately', 'error');
+            return;
+        }
+
+        if (!url.includes('webfactory')) {
+            showMessage('This website does not support LinkOS architecture', 'error');
+            return;
+        }
+
+        goToFullscreenBrowser(url);
+    }
+
+    function goToFullscreenBrowser(url) {
+        try {
+            let cleanUrl = url.trim();
+            if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+
+            currentUrl = cleanUrl;
+            websiteFrame.src = cleanUrl;
+            
+            const displayUrl = new URL(cleanUrl);
+            urlDisplay.textContent = `${displayUrl.protocol}//${displayUrl.hostname}`;
+            
+            homeView.classList.add('home-view-hidden');
+            browserView.classList.add('browser-view-active');
+            message.style.display = 'none';
+            searchInput.value = '';
+            document.body.style.overflow = 'hidden';
+        } catch (error) {
+            showMessage('Invalid URL format', 'error');
+        }
+    }
+
+    function goBack() {
+        homeView.classList.remove('home-view-hidden');
+        browserView.classList.remove('browser-view-active');
+        websiteFrame.src = '';
+        currentUrl = '';
+        document.body.style.overflow = 'auto';
+    }
+
+    function showModal() {
+        modalOverlay.style.display = 'flex';
+        appName.value = '';
+        appUrl.value = '';
+        appPassword.value = '';
+        appIcon.value = '';
+        fileInfo.textContent = 'No file selected';
+    }
+
+    function hideModal() {
+        modalOverlay.style.display = 'none';
+    }
+
+    function showDeleteModal(id) {
+        appToDeleteId = id;
+        deletePassword.value = '';
+        deleteModalOverlay.style.display = 'flex';
+    }
+
+    function hideDeleteModal() {
+        deleteModalOverlay.style.display = 'none';
+        appToDeleteId = null;
+    }
+
+    function displayApps() {
+        appsGrid.innerHTML = '';
+        
+        if (apps.length === 0) {
+            appsGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-th-large" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <p>No apps published yet</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">Click "Publish App" to add your first app</p>
+                </div>
+            `;
+            return;
+        }
+        
+        apps.forEach(app => {
+            const appElement = document.createElement('div');
+            appElement.className = 'app-card';
+            
+            appElement.innerHTML = `
+                <button class="app-delete-btn" title="Delete App">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <img src="${app.icon}" alt="${app.name}" class="app-icon">
+                <div class="app-name">${app.name}</div>
+            `;
+            
+            appElement.addEventListener('click', (e) => {
+                if (e.target.closest('.app-delete-btn')) return;
+
+                if (app.url.includes('.')) {
+                    goToFullscreenBrowser(app.url);
+                } else {
+                    showMessage('This app does not support LinkOS architecture', 'error');
+                }
+            });
+
+            const deleteBtn = appElement.querySelector('.app-delete-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showDeleteModal(app.id);
+            });
+            
+            appsGrid.appendChild(appElement);
+        });
+    }
+
+    function showMessage(text, type) {
+        message.textContent = text;
+        message.className = 'message ' + type;
+        message.style.display = 'block';
+        
+        if (type === 'success') setTimeout(() => message.style.display = 'none', 3000);
+        if (type === 'error') setTimeout(() => message.style.display = 'none', 5000);
+        if (type === 'info') setTimeout(() => message.style.display = 'none', 3000);
+    }
+
+    // ====================
+    // Initialize the app
+    // ====================
+    init();
+    </script>
+</body>
+</html>
