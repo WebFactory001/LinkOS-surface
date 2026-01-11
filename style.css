@@ -30,7 +30,7 @@
 
   /* Background with image */
   body{
-    background:url('wallpapers/wallpaper1.png') center/cover no-repeat;
+    background:url('wallpapers/wallpaper1.jpg') center/cover no-repeat;
     transition: background 0.5s ease;
   }
 
@@ -117,53 +117,6 @@
     white-space: nowrap;
     letter-spacing: 4px;
     text-shadow: 0 0 80px rgba(123, 104, 238, 0.1);
-  }
-
-  /* Taskbar (Windows-style) with premium glassmorphism */
-  .taskbar{
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 44px;
-    background: rgba(25, 25, 40, 0.6);
-    backdrop-filter: blur(25px) saturate(180%);
-    -webkit-backdrop-filter: blur(25px) saturate(180%);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 10px;
-    z-index: 998;
-    background-image: linear-gradient(to top, rgba(0,0,0,0.1) 0%, transparent 100%);
-  }
-
-  .taskbar-app{
-    padding: 8px 16px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 10px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-weight: 500;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .taskbar-app:hover{
-    background: rgba(255,255,255,0.2);
-    transform: translateY(-1px);
-    border: 1px solid var(--border-light);
-  }
-
-  .taskbar-app.active{
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 5px 15px var(--accent-glow);
-    border: 1px solid rgba(255,255,255,0.3);
   }
 
   /* Dock (macOS-style) with premium glassmorphism */
